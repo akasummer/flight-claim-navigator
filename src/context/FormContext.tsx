@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { 
@@ -16,10 +15,6 @@ import {
 } from "@/types";
 import { submitClaim, getClaimMessages, mockStatusUpdate, mockRequestAdditionalInfo } from "@/api/mockApi";
 import { toast } from "@/components/ui/sonner";
-
-// Add uuid dependency
-<lov-add-dependency>uuid@^9.0.0</lov-add-dependency>
-<lov-add-dependency>@types/uuid@^9.0.1</lov-add-dependency>
 
 interface FormContextType {
   formData: FormData;
