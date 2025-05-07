@@ -7,6 +7,11 @@ export type Airport = {
   country: string;
 };
 
+export type ItineraryAirport = {
+  id: string;
+  airport: Airport | null;
+};
+
 export type Flight = {
   id: string;
   departureAirport: Airport | null;
@@ -86,6 +91,7 @@ export type Claim = {
 };
 
 export type FormData = {
+  itinerary: ItineraryAirport[];
   flights: Flight[];
   hasConnectingFlights: boolean;
   mainPassenger: Passenger;
@@ -97,4 +103,4 @@ export type FormData = {
   evidenceFiles: UploadedFile[];
 };
 
-export type FormStep = "FLIGHT_INFO" | "PERSONAL_INFO" | "CLAIM_DETAILS" | "STATUS";
+export type FormStep = "ITINERARY" | "FLIGHT_INFO" | "PERSONAL_INFO" | "CLAIM_DETAILS" | "STATUS";

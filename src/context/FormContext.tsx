@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { 
@@ -11,7 +12,8 @@ import {
   FormStep,
   Claim,
   Message,
-  Response
+  Response,
+  ItineraryAirport
 } from "@/types";
 import { submitClaim, getClaimMessages, mockStatusUpdate, mockRequestAdditionalInfo } from "@/api/mockApi";
 import { toast } from "@/components/ui/sonner";
@@ -26,7 +28,10 @@ interface FormContextType {
   goToNextStep: () => void;
   goToPreviousStep: () => void;
   updateFlightField: (flightId: string, field: string, value: any) => void;
-  setHasConnectingFlights: (value: boolean) => void;
+  addAirportToItinerary: (airport: Airport | null) => void;
+  updateAirportInItinerary: (index: number, airport: Airport | null) => void;
+  removeAirportFromItinerary: (index: number) => void;
+  generateFlightsFromItinerary: () => void;
   addFlight: () => void;
   removeFlight: (id: string) => void;
   updateMainPassenger: (field: string, value: string) => void;
@@ -48,10 +53,10 @@ interface FormContextType {
 
 const FormContext = createContext<FormContextType | undefined>(undefined);
 
-const createEmptyFlight = (): Flight => ({
+const createEmptyFlight = (departureAirport: Airport | null = null, arrivalAirport: Airport | null = null): Flight => ({
   id: uuidv4(),
-  departureAirport: null,
-  arrivalAirport: null,
+  departureAirport,
+  arrivalAirport,
   transitAirports: [],
   departureDate: null,
   flightNumber: "",
@@ -66,7 +71,8 @@ const createEmptyPassenger = (): Passenger => ({
 
 export const FormProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [formData, setFormData] = useState<FormData>({
-    flights: [createEmptyFlight()],
+    itinerary: [],
+    flights: [],
     hasConnectingFlights: false,
     mainPassenger: createEmptyPassenger(),
     fellowPassengers: [],
@@ -77,7 +83,7 @@ export const FormProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     evidenceFiles: [],
   });
 
-  const [currentStep, setCurrentStep] = useState<FormStep>("FLIGHT_INFO");
+  const [currentStep, setCurrentStep] = useState<FormStep>("ITINERARY");
   const [claim, setClaim] = useState<Claim | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -85,6 +91,8 @@ export const FormProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const goToNextStep = useCallback(() => {
     setCurrentStep((prevStep) => {
       switch (prevStep) {
+        case "ITINERARY":
+          return "FLIGHT_INFO";
         case "FLIGHT_INFO":
           return "PERSONAL_INFO";
         case "PERSONAL_INFO":
@@ -100,6 +108,8 @@ export const FormProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const goToPreviousStep = useCallback(() => {
     setCurrentStep((prevStep) => {
       switch (prevStep) {
+        case "FLIGHT_INFO":
+          return "ITINERARY";
         case "PERSONAL_INFO":
           return "FLIGHT_INFO";
         case "CLAIM_DETAILS":
@@ -112,24 +122,65 @@ export const FormProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   }, []);
 
+  const addAirportToItinerary = useCallback((airport: Airport | null) => {
+    setFormData((prev) => ({
+      ...prev,
+      itinerary: [...prev.itinerary, { id: uuidv4(), airport }],
+    }));
+  }, []);
+
+  const updateAirportInItinerary = useCallback((index: number, airport: Airport | null) => {
+    setFormData((prev) => {
+      const updatedItinerary = [...prev.itinerary];
+      if (index >= 0 && index < updatedItinerary.length) {
+        updatedItinerary[index] = { ...updatedItinerary[index], airport };
+      }
+      return {
+        ...prev,
+        itinerary: updatedItinerary,
+      };
+    });
+  }, []);
+
+  const removeAirportFromItinerary = useCallback((index: number) => {
+    setFormData((prev) => {
+      const updatedItinerary = [...prev.itinerary];
+      updatedItinerary.splice(index, 1);
+      return {
+        ...prev,
+        itinerary: updatedItinerary,
+      };
+    });
+  }, []);
+
+  const generateFlightsFromItinerary = useCallback(() => {
+    setFormData((prev) => {
+      const newFlights: Flight[] = [];
+      
+      // Create flights from itinerary
+      for (let i = 0; i < prev.itinerary.length - 1; i++) {
+        const departureAirport = prev.itinerary[i].airport;
+        const arrivalAirport = prev.itinerary[i + 1].airport;
+        newFlights.push(createEmptyFlight(departureAirport, arrivalAirport));
+      }
+      
+      // Set hasConnectingFlights based on number of airports
+      const hasMultipleFlights = prev.itinerary.length > 2;
+      
+      return {
+        ...prev,
+        flights: newFlights,
+        hasConnectingFlights: hasMultipleFlights,
+      };
+    });
+  }, []);
+
   const updateFlightField = useCallback((flightId: string, field: string, value: any) => {
     setFormData((prev) => ({
       ...prev,
       flights: prev.flights.map((flight) =>
         flight.id === flightId ? { ...flight, [field]: value } : flight
       ),
-    }));
-  }, []);
-
-  const setHasConnectingFlights = useCallback((value: boolean) => {
-    setFormData((prev) => ({
-      ...prev,
-      hasConnectingFlights: value,
-      // Reset transit airports if no connecting flights
-      flights: prev.flights.map((flight) => ({
-        ...flight,
-        transitAirports: value ? flight.transitAirports : [],
-      })),
     }));
   }, []);
 
@@ -333,7 +384,10 @@ export const FormProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     goToNextStep,
     goToPreviousStep,
     updateFlightField,
-    setHasConnectingFlights,
+    addAirportToItinerary,
+    updateAirportInItinerary, 
+    removeAirportFromItinerary,
+    generateFlightsFromItinerary,
     addFlight,
     removeFlight,
     updateMainPassenger,
