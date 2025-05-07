@@ -48,6 +48,7 @@ export const statusLabels: Record<ClaimStatus, { label: string, color: string }>
 };
 
 export const stepLabels: Record<FormStep, string> = {
+  "ITINERARY": "Itinerary",
   "FLIGHT_INFO": "Flight Information",
   "PERSONAL_INFO": "Personal Information",
   "CLAIM_DETAILS": "Claim Details",
